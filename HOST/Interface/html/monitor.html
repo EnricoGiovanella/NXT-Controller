@@ -1,0 +1,144 @@
+<html lang="us">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <link href="css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="css/monitor.css" rel="stylesheet"/>
+  <!-- jQuery library -->
+  <script src="js/jquery-3.1.1.js">
+  </script>
+  <script src="js/bootstrap.min.js">
+  </script>
+  <!-- app monitor JavaScript -->
+  <script src="js/config.js">
+  </script>
+  <script src="js/tools.js">
+  </script>
+  <script src="js/manageConnection.js">
+  </script>
+  <script src="js/monitor.js">
+  </script>
+ </head>
+ <body>
+  <nav class="navbar navbar-expand-sm">
+   <img class="mx-auto d-block" src="img/mega2560_100.png" style="max-height:100px;"/>
+  </nav>
+  <div class=".container-fluid ml-3 mr-3" id="contenuto">
+   <div id="MainAccordion">
+    <div class="card">
+     <div class="card-header">
+      <a aria-expanded="true" class="card-link" data-toggle="collapse" href="#MainCollapseOne">
+       Web Socket connection
+      </a>
+      <div>
+      </div>
+      <div class="form-inline" id="groupSocketE">
+       <span class="disconnectMessage">
+        disconnected
+       </span>
+      </div>
+      <div class="collapse" data-parent="#MainAccordion" id="MainCollapseOne" style="">
+       <div class="card-body" id="groupSocket">
+        <div class="row">
+         <div class="form-group col-sm-4 mb-3 text-center">
+          <label class="col-form-label" for="idsoc_host">
+           host
+          </label>
+          <input class="form-control form-control-sm" id="idsoc_host" type="text"/>
+         </div>
+         <div class="form-group col-sm-2 mb-3 text-center">
+          <label class="col-form-label" for="idsoc_post">
+           port
+          </label>
+          <input class="form-control form-control-sm" id="idsoc_post" type="text"/>
+         </div>
+         <div class="form-group col-sm-3 mb-3 text-center">
+          <br/>
+          <button class="btn btn-custom1" id="idsoc_connect" type="button">
+           Connect
+          </button>
+         </div>
+         <div class="form-group col-sm-3 mb-3 text-center">
+          <br/>
+          <button class="btn btn-custom1" disabled="" id="idsoc_disconnect" type="button">
+           Disconnect
+          </button>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+    <div class="card">
+     <div class="card-header">
+      <a aria-expanded="false" class="card-link collapsed" data-toggle="collapse" href="#MainCollapseDue">
+       Serial connection
+      </a>
+      <div>
+      </div>
+      <div class="form-inline" id="groupSerialE">
+       <span class="disconnectMessage">
+        disconnected
+       </span>
+      </div>
+      <div class="collapse" data-parent="#MainAccordion" id="MainCollapseDue" style="">
+       <div class="card-body" id="groupSerial">
+        <div class="row">
+         <div class="form-group col-sm-3 mb-3 text-center">
+          <label class="col-form-label" for="idser_device">
+           device
+          </label>
+          <select class="form-control form-control-sm" id="idser_device">
+          </select>
+         </div>
+         <div class="form-group col-sm-2 mb-3 text-center">
+          <label class="col-form-label" for="idser_baud">
+           baud
+          </label>
+          <select class="form-control form-control-sm" id="idser_baud">
+          </select>
+         </div>
+         <div class="form-group col-sm-2 mb-3 text-center">
+          <label class="col-form-label" for="idser_parity">
+           parity
+          </label>
+          <select class="form-control form-control-sm" id="idser_parity">
+          </select>
+         </div>
+         <div class="form-group col-sm-2 mb-3 text-center">
+          <label class="col-form-label" for="idser_stop">
+           stop
+          </label>
+          <select class="form-control form-control-sm" id="idser_stop">
+          </select>
+         </div>
+         <div class="form-group col-sm-2 mb-3 text-center">
+          <label class="col-form-label" for="idser_data">
+           data
+          </label>
+          <select class="form-control form-control-sm" id="idser_data">
+          </select>
+         </div>
+        </div>
+        <div class="row">
+         <div class="form-group col-sm-3 mb-3 text-center">
+          <br/>
+          <button class="btn btn-custom1" disabled="" id="idser_connect" type="button">
+           Connect
+          </button>
+         </div>
+         <div class="form-group col-sm-3 mb-3 text-center">
+          <br/>
+          <button class="btn btn-custom1" disabled="" id="idser_disconnect" type="button">
+           Disconnect
+          </button>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>
