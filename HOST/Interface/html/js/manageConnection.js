@@ -133,6 +133,19 @@ var comSerialGroup = {
 		statesManager.records(["browserOk","connectWs","connectSerial"],this);
 		setData(["idser_states","idser_codE"],["states","codE"],["rp","rp"],{states: "disconnected", codE: ""});
 	},
+	trasmitData:function(msg) {
+		if(msg == "serialOpen") 
+			trasmitMsg.trasmitWs("serialOpen",getData(
+				this.serialOpenId,this.serialOpenField,this.serialOpenInType));
+		if(msg == "serialClose") trasmitMsg.trasmitWs("serialClose",{});
+	},
+	receiveData:function(msg,data) {
+		// function call from  NO pageManager.dispatchMsg(nameMsg,data) but receiveMsg.recMsgCod_5
+		this.codError = data["codE"];
+		if(data["states"]) this.connectSerial = true;
+		else this.connectSerial = false;
+		statesManager.setStates({'connectSerial': this.connectSerial});
+	},
 	callBConnect:function(data,e) {
 	},
 	callBDisconnect:function(data,e) {
