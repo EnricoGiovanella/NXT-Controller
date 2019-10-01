@@ -71,11 +71,11 @@ var pageManager = {
 	start:function() {
 		for(var g in this.listObjGroup) this.listObjGroup[g].start();
 	},
-	recordReceiveGroup(objGroup,listNameRMsg) {
+	recordReceiveGroup:function(objGroup,listNameRMsg) {
 		this.listObjGroup.push(objGroup);
 		for(var nMsg in listNameRMsg) this.listObjRMsg[listNameRMsg[nMsg]] = objGroup;
 	},
-	dispatchMsg(nameMsg,data) {
+	dispatchMsg:function(nameMsg,data) {
 		this.listObjRMsg[nameMsg].receiveData(nameMsg,data);
 	}
 };
