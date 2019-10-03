@@ -1,3 +1,20 @@
+/*
+*	 tools.js objects
+* statesManager
+*  pageManager
+*	 tools.js functions
+* eventClick(gobj,listId,listFcb)
+*  eventChange(obj,listId,listFcb)
+* getData(listId,listField,listInType)
+* setData(listId,listField,listInType,data)
+* enableElements(listId)
+* disableElements(listId)
+*drawSelectOptions(listId,group,ListNameOpz)
+*	type input code
+	empty or h = hidden, ro and rp = read only (plain), i = input,
+*	 c  = checkbox, pc = prepend checkbox, s or sm = select(multiple) b = button
+*/
+
 
 /*
 	object comSocketGroup
@@ -30,7 +47,9 @@
 * name of button:	
 * label of field:	states error code
 * html id field:	idsoc_states idsoc_codE
-* type of input field:	rp rp 
+* type of input field:	rp rp
+* option group:			
+* option for html selec input:	 
 
 */
 var comSocketGroup = {
@@ -38,6 +57,9 @@ var comSocketGroup = {
 	socketOpenId : ["idsoc_host","idsoc_post"],
 	socketOpenField : ["host","port"],
 	socketOpenInType : ["i","i"],
+	socketCloseId : [],
+	socketCloseField : [],
+	socketCloseInType : [],
 	socketStatesId : ["idsoc_states","idsoc_codE"],
 	socketStatesField : ["states","codE"],
 	socketStatesInType : ["rp","rp"],
@@ -50,10 +72,10 @@ var comSocketGroup = {
 	callBConnect:function(data,e) {
 		var param = getData(this.socketOpenId,this.socketOpenField,this.socketOpenInType);
 		var host = param["host"].trim() + ':' + param["port"].trim();
-		statesManager.setStates({connectWs: true});
+		clientWS.connect(host);
 	},
 	callBDisconnect:function(data,e) {
-		statesManager.setStates({connectWs: false});
+		clientWS.disconnect();
 	},
 	callBackStates: function(modStates) {
 		// function call from statesManager.setStates(states)
@@ -126,21 +148,22 @@ var comSerialGroup = {
 	serialOpenId : ["idser_device","idser_baud","idser_parity","idser_stop","idser_data"],
 	serialOpenField : ["device","baud","parity","stop","data"],
 	serialOpenInType : ["s","s","s","s","s"],
+	serialOpenValType: ["s","i","i","i","i"],		//i=integer,f=float,s=string,b=bool
 	start:function() {
 		eventClick(this,["idser_connect"],["callBConnect"]);
 		drawSelectOptions(["idser_device","idser_baud","idser_parity","idser_stop","idser_data"],"serial",["devices","baud","parity","stop","data"]);
 		eventClick(this,["idser_disconnect"],["callBDisconnect"]);
-		statesManager.records(["browserOk","connectWs","connectSerial"],this);
+		statesManager.records(["browserOk","connectWs","connectSerial"],this);	// ex. [connectWs,connectSerial]
 		setData(["idser_states","idser_codE"],["states","codE"],["rp","rp"],{states: "disconnected", codE: ""});
 	},
 	trasmitData:function(msg) {
 		if(msg == "serialOpen") 
-			trasmitMsg.trasmitWs("serialOpen",getData(
-				this.serialOpenId,this.serialOpenField,this.serialOpenInType));
-		if(msg == "serialClose") trasmitMsg.trasmitWs("serialClose",{});
+			trasmitMsg.trasmitWs("serialOpen",
+				getData(this.serialOpenId,this.serialOpenField,this.serialOpenInType,this.serialOpenValType));
+		if(msg == "serialClose") trasmitMsg.trasmitWs("serialClose",{}); //No data
 	},
 	receiveData:function(msg,data) {
-		// function call from  NO pageManager.dispatchMsg(nameMsg,data) but receiveMsg.recMsgCod_5
+		// function call from pageManager.dispatchMsg(nameMsg,data)
 		this.codError = data["codE"];
 		if(data["states"]) this.connectSerial = true;
 		else this.connectSerial = false;
@@ -162,7 +185,7 @@ var comSerialGroup = {
 				disableElements(all);
 				return;
 			}
-		var connect = ["idser_device","idser_baud","idser_parity","idser_stop","idser_data","idser_connect"]
+		var connect = ["idser_device","idser_baud","idser_parita","idser_stop","idser_dati","idser_connect"]
 		if('connectWs' in modStates) {
 			if(modStates['connectWs']) enableElements(connect);
 			else disableElements(all);

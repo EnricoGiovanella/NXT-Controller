@@ -1,18 +1,18 @@
 /*
-*	 tools.js objects
-* statesManager gestisce gli stati della pagina
-*  pageManager gestisce la logica della pagina
-*	 tools.js functions funzioni di utilità
-* eventClick(gobj,listId,listFcb)
-*  eventChange(obj,listId,listFcb)
-* getData(listId,listField,listInType) recupera i dati dall'input html
-* setData(listId,listField,listInType,data) imposta l'input html
-* enableElements(listId) abilita gli elementi html
-* disableElements(listId) disabilita gli elementi html
-* drawSelectOptions(listId,group,ListNameOpz) aggiunge gli item all'elemento select
+* tools.js objects
+* statesManager manages page states
+* pageManager manages the logic of the page
+* tools.js functions utility functions
+* eventClick (gobj, listId, listFcb)
+* eventChange (obj, listId, listFcb)
+* getData (listId, listField, listInType) retrieves data from the html input
+* setData (listId, listField, listInType, data) sets the html input
+* enableElements (listId) enables html elements
+* disableElements (listId) disables html elements
+* drawSelectOptions (listId, group, ListNameOpz) adds the items to the select element
 
-*  empty or h = hidden, ro and rp = read only (plain), i = input,
-*  c  = checkbox, pc = prepend checkbox, s or sm = select(multiple) b = button
+* empty or h = hidden, ro and rp = read only (plain), i = input,
+* c = checkbox, pc = prepend checkbox, s or sm = select (multiple) b = button
 */
 
 var statesManager = {
@@ -99,23 +99,39 @@ function eventChange(obj,listId,listFcb) {
 	}
 }
 
-function getData(listId,listField,listInType) {
+function getData(listId,listField,listInType,listTypeVar) {
 	rit = {};
 	for(i in listId) {
+		var value = '';
 		if((listInType[i] == 'c') || (listInType[i] == 'pc'))	//checkbox
-			if($('#' + listId[i]).is(":checked")) rit[listField[i]] = 1;
-			else rit[listField[i]] = 0;
-		else rit[listField[i]] = $('#' + listId[i]).val();  
+			value = $('#' + listId[i]).is(":checked");
+		else value = $('#' + listId[i]).val();
+		switch(listTypeVar[i]) {
+			case "i":
+				rit[listField[i]] = parseInt(value);
+				if(isNaN(rit[listField[i]])) rit[listField[i]] = 0;
+			break;
+			case "f":
+				rit[listField[i]] = parseFloat(value);
+				if(isNaN(rit[listField[i]])) rit[listField[i]] = 0.0;
+			break;
+			case "b":
+				if(value) rit[listField[i]] = 1;
+				else rit[listField[i]] = 0;
+			break;
+			default:
+				rit[listField[i]] = value;
+		}
 	}
 	return rit;
 }
 
-function setData(listId,listField,listInType,data) {
+function setData(listId,listField,listInType,data) { 
 	for(i in listId) {
 		if((listInType[i] == 'c') || (listInType[i] == 'pc'))	//checkbox
 			if(data[listField[i]]) $('#' + listId[i]).prop('checked', true);
 			else $('#' + listId[i]).prop('checked', false);
-		else $('#' + listId[i]).val(data[listField[i]]);
+		else $('#' + listId[i]).val(String(data[listField[i]]));
 	}
 }
 
