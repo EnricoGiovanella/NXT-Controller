@@ -1,0 +1,40 @@
+/*
+timer prescaler
+CSx2	CSx1	CSx0	Description
+0	0	0	No clock source. (Timer/Counter stopped)		TCCR1B | = 0
+0	0	1	clkI/O  /1 (No prescaling				TCCR1B | = (1 << CSx0)
+0	1	0	clkI/O  /8 (From prescaler)				TCCR1B | = (1 << CSx1)
+0	1	1	clkI/O  /64 (From prescaler)				TCCR1B | = (1 << CSx0) | (1 << CSx1)
+1	0	0	clkI/O  /256 (From prescaler)				TCCR1B | = (1 << CSx2)
+1	0	1	clkI/O  /1024 (From prescaler)				TCCR1B | = (1 << CSx0) | (1 << CSx2)
+1	1	0	External clock source on Tn pin. Clock on falling edge
+1	1	1	External clock source on Tn pin. Clock on rising edge
+*/
+
+
+/*
+Wave Generation Mode Bits TIMER 1,3,4,5
+
+Mode	WGMn3:0	Mode of				TOP	Update of 	TOV1 Flag Set on
+		Operation			OCRnx
+
+0	0000	Normal				0XFFFF	Immediate	0xFFFF
+1	0001	PWM phase correct 8 bit		0x00FF	TOP		BOTTOM
+2 	0010	PWM phase correct 9 bit 	0x01FF	TOP		BOTTOM
+3	0011	PWM phase correct 10 bit	0x03FF	TOP		BOTTOM
+4	0100	Capture				OCRnA	Immediate	0xFFFF
+5	0101	Fast PWM 8 bit			0x00FF	BOTTOM		TOP
+6	0110	Fast PWM 9 bit			0x01FF	BOTTOM		TOP
+7	0111	Fast PWM 10 bit			0x03FF	BOTTOM		TOP
+8	1000	PWM phase/frequency correct	ICRn	BOTTOM		BOTTOM
+9	1001	PWM phase/frequency correct	OCRnA	BOTTOM		BOTTOM
+10	1010	PWM phase correct		ICRn	TOP		BOTTOM
+11	1011	PWM phase correct		OCRnA	TOP		BOTTOM
+12	1100	capture				ICRn	Immediate	0xFFFF
+13	1101	Reserved
+14	1110	Fast PWM 			ICRn	BOTTOM		TOP
+15	1111	Fast PWM			OCRnA	BOTTOM		TOP
+
+*/
+
+
