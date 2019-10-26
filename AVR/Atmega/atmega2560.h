@@ -4,6 +4,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <stdint.h>
+#include "message.h"
 
 
 /*----------------------------------------------------------------------------------
@@ -15,11 +16,11 @@ so as to be able to modify them without modifying the code in .c.
 uart, interrupts and timers used:
 
 high priority		PCINT2_vect			encoder pin change interrupt
+			USART0_RX_vect 
+			USART0_UDRE_vect 
+			USART0_TX_vect			serial UART
 			(timer 4) TIMER_COMPA_SYSTEMT	system timer
 			(timer 5) no interrupt		PWM encoder
-			USART2_RX_vect 
-			USART2_UDRE_vect 
-			USART2_TX_vect			serial UART
 low priority
 
 the variables modified in the interrupt routines have the volatile tag.
@@ -29,48 +30,6 @@ ATOMIC_BLOCK(ATOMIC_FORCEON) {} in include <util/atomic.h>
 in interrupt routines the other possible interrupts are suspended by default.
 ----------------------------------------------------------------------------------*/
 
-/*----------------------------------------------------------------------------------
-Eencoder uses the interrupt pin change and the vector PCINT2_vect PCIINT[16-23]
-the interrupt is activated on the rising and falling edges of both encoder pins
-the input pins are:
-encoder input 1 --> input Atmega2560 pin 89 PK1 PCINT17 = arduino A8
-encoder input 2 --> input Atmega2560 pin 88 PK0 PCINT16 = arduino A9
-TODO in the routine the position on a uint16_t variable is calculated from 0 to 65535,
-the direction of rotation is calculated and the value of the system timer counter is stored.
-Moreover if enabled and if the position is equal to the target position the motor is stopped.
-The conversion of the position into revolutions and position 0-720 is done in the interrupt system timer
-or in the callback function
-----------------------------------------------------------------------------------*/
-
-// input pin
-#define INPUT_ENCODER DDRK &= ~((1<<PK1) | (1<<PK0))  // Set PK0 PK1 as input
-
-#define PULLUP_ENCODER PORTK |= ((1<<PK1) | (1<<PK0)) // Activate PULL UP
-
-#define INTERRUPTVECT_ENCODER PCINT2_vect
-
-
-/*----------------------------------------------------------------------------------
-system timer(timer 4)
-This timer acts as a system clock and generates an interrupt every millisecond.
-The TCNT timer counter is used by the ecoder to measure the time of a rising
-or falling edge of the pins to calculate the motor speed.
-Set a flag to activate the callBack () function at a predefined interval (settable).
-Perform conversions along with the callBack () function of position, spins, speed (when possible).
-TODO callBack () is an inline function in the main loop.
-----------------------------------------------------------------------------------*/
-
-#define PRESCALER_SYSTEMT (1 << CS40)	// timer 4 clk/1
-
-#define OCRA_SYSTEMT OCR4A = 16000	// Output Compare Register A 16000000/16000 = 1000 interrupt/s
-
-#define MODEB_SYSTEMT (1 << WG42)	// TCCR4B register mode 4
-
-#define SETTIMER_SYSTEMT TCCR4B |= MODEB_SYSTEMT | PRESCALER_SYSTEMT // TCCR4B register mode 4 prescaler /1
-
-#define SETINTERRUPT_SYSTEMT TIMSK4 | = (1 << OCIE4A)	// set interrupt set the interrupt when TCNT4 == OCR4A
-
-#define INTERRUPTVECT_SYSTEMT TIMER4_COMPA_vect
 
 /*----------------------------------------------------------------------------------
 HBridge timer 5
@@ -88,6 +47,7 @@ No interrupt routine is needed as the hardware connects directly to pin PL4 (por
 by setting the correct square wave value.
 ----------------------------------------------------------------------------------*/
 
+
 #define OUTPUTDIR_HBRIDGE DDRC |= (1<<PC1) | (1<<PC0) // Set PC0 PC1 as output
 
 
@@ -97,7 +57,7 @@ by setting the correct square wave value.
 
 #define STOP_MOTOR_HBRIDGE PORTC &= 0xFC	// 0b11111100 set to 0 PC0 PC1
 #define SET_FORWARD_HBRIDGE PORTC |= 1		// 0b00000001 set to 1 PCO
-#define SET_REVERSE_HBRIDGE PORTC = 2		// 0b00000010 set to 1 PC1
+#define SET_REVERSE_HBRIDGE PORTC |= 2		// 0b00000010 set to 1 PC1
 
 // use  STOP_MOTOR_HBRIDGE before SET_FORWARD_HBRIDGE or SET_REVERSE_HBRIDGE
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,14 +71,14 @@ by setting the correct square wave value.
 // (1 << WG53) (1 << WG50) 0b1001
 // mode 9 0b1001 PWM phase/frequency correct use TCNT5 = OCR5A max counter update BOTTOM
 
-#define SETAPWM_HBRIDGE TCCR5A |= OUTPWM_HBRIDGE | (1 << WG50)	
-#define SETBPWM_HBRIDGE TCCR5B |= (1 << WG53) |  PRESCALER_HBRIDGE 
+#define SETAPWM_HBRIDGE TCCR5A |= OUTPWM_HBRIDGE | (1 << WGM50)
+#define SETBPWM_HBRIDGE TCCR5B |= (1 << WGM53) |  PRESCALER_HBRIDGE
 /*
-OCR5A
-register OCR5B contains the maximum number of PWM steps
-1750 step the maximum number of engine laps is 175 rpm so there is a minimum resolution of 0.1 rpm
+    OCR5A
+    register OCR5B contains the maximum number of PWM steps
+    1750 step the maximum number of engine laps is 175 rpm so there is a minimum resolution of 0.1 rpm
 				16000000
-the frequency of the PWM = ------------------ = 4571,4 Hz
+    the frequency of the PWM = ------------------ = 4571,4 Hz
 				1750 X 2
 */
 
@@ -126,44 +86,91 @@ the frequency of the PWM = ------------------ = 4571,4 Hz
 
 #define VAR_DUTY_HBRIGE OCR5B
 
-/*----------------------------------------------------------------------------------
-serial
 
-pin 13 PH1 ATMEGA2560 = Arduino MEGA2560 TX2 digital pin 16 = FT232 USB UART board RXD
-pin 12 PH0 ATMEGA2560 = Arduino MEGA2560 RX2 digital pin 17 = FT232 USB UART board TXD
+/*----------------------------------------------------------------------------------
+Encoder uses the interrupt pin change and the vector PCINT2_vect PCIINT[16-23]
+the interrupt is activated on the rising and falling edges of both encoder pins
+the input pins are:
+encoder input 1 --> input Atmega2560 pin 89 PK1 PCINT17 = arduino A8
+encoder input 2 --> input Atmega2560 pin 88 PK0 PCINT16 = arduino A9
+----------------------------------------------------------------------------------*/
+
+#define PORT_ENCODER ((1<<PK0) | (1<<PK1) | (1<<PK2) | (1<<PK3) | (1<<PK4) | (1<<PK5) | (1<<PK6) | (1<<PK7))
+
+#define SETPORT_ENCODER DDRK |= PORT_ENCODER; PORTK |= PORT_ENCODER
+
+// input pin
+#define INPUT_ENCODER DDRK &= ~((1<<PK1) | (1<<PK0))  // Set PK0 PK1 as input
+
+#define PULLUP_ENCODER PORTK |= ((1<<PK1) | (1<<PK0)) // Activate PULL UP
+
+#define SETINTERRUPT_ENCODER PCICR |= (1 << PCIE2); PCMSK2 |= ((1 << PCINT17) | (1 << PCINT18))
+
+// retrieves the values of the encoder inputs
+#define VALUE_ENCODER PINK & 3  // 0b00000011 read 000000(PK1)(PK0)
+
+#define INTERRUPTVECT_ENCODER PCINT2_vect
+
+
+/*----------------------------------------------------------------------------------
+system timer(timer 4)
+This timer acts as a system clock and generates an interrupt every millisecond.
+The TCNT timer counter is used by the ecoder to measure the time of a rising
+or falling edge of the pins to calculate the motor speed.
+Set a flag to activate the feedBack () function at a predefined interval (settable).
+Perform conversions along with the feedBack () function of position, spins, speed (when possible).
+feedBack () is an inline function in the main loop.
+----------------------------------------------------------------------------------*/
+
+#define PRESCALER_SYSTEMT (1 << CS40)  // timer 4 clk/1
+
+#define MULTIPLIER_FRACTIONAL_TIME 0,0000625
+#define MAXTIMER_SYSTEMT 16000
+#define OCRA_SYSTEMT OCR4A = MAXTIMER_SYSTEMT	// Output Compare Register A 16000000/16000 = 1000 interrupt/s
+
+#define MODEB_SYSTEMT (1 << WGM42) // TCCR4B register mode 4
+
+#define SETTIMER_SYSTEMT TCCR4B |= MODEB_SYSTEMT | PRESCALER_SYSTEMT // TCCR4B register mode 4 prescaler /1
+
+#define SETINTERRUPT_SYSTEMT TIMSK4 |= (1 << OCIE4A) // set interrupt set the interrupt when TCNT4 == OCR4A
+
+#define INTERRUPTVECT_SYSTEMT TIMER4_COMPA_vect
+
+#define COUNTER_SYSTEM TCNT4
+
+/*----------------------------------------------------------------------------------
+serial UART0
+
+serial over usb
+
 the serial uses two vectors id interrupt one to receive and one to transmit.
 binary messages have a first byte that represents the type of message that has a predetermined
 size and therefore its length
 ----------------------------------------------------------------------------------*/
 
-#define SETRX_SERIAL DDRH |= (1 << PH0); PORTH |= ((1<<PH0)
-#define SETTX_SERIAL DDRH &= (~(1 << PH1))
-
 #define F_CPU 16000000
-#define USART_BAUDRATE 115200
+#define BAUD 115200
 
-#define UBRR_VALUE_SERIAL (((F_CPU / (USART_BAUDRATE * 16UL))) - 1)
-#define DIVIDER_SERIAL UCSR2A |= (1 << U2X2)
+#include <util/setbaud.h>
 
-//#define UBRR_VALUE (((F_CPU / (USART_BAUDRATE * 8UL))) - 1)
-//#define DIVIDER_SERIAL UCSR2A &= ~(1 << U2X2)
+#define SETBAUDH_SERIAL UBRR0H
+#define SETBAUDL_SERIAL UBRR0L
 
-// Set baud rate
-#define CLEARFLAG_SERIAL UCSR2A = 0x00	//Clear send and receive flags
-#define SETBAUDH_SERIAL UBRR2H = (uint8_t) (UBRR_VALUE_SERIAL >> 8)
-#define SETBAUDL_SERIAL UBRR2L = (uint8_t) UBRR_VALUE_SERIAL
-  // Set frame format to 8 data bits, no parity, 1 stop bit
-#define SETOTHER_SERIAL UCSR2C |= (1 << UCSZ20) | (1 << UCSZ21)
-  //enable transmission, reception and routine interrupt
-//#define ENABLE_SERIAL UCSR2B |= (1<<RXEN2) | (1<<TXEN2) | (1<<RXCIE2) | (1<<TXCIE2) | (1<<UDRIE2)
-#define ENABLE_SERIAL UCSR2B |= (1<<RXEN2) | (1<<TXEN2) | (1<<RXCIE2) | (1<<TXCIE2)
+#define FLAG_SERIAL UCSR0A
+#define U2X_SERIAL U2X0
 
-#define DATARXTX_SERIAL UDR2
 
-#define RX_VECT_SERIAL USART2_RX_vect
+#define SETOTHER_SERIAL UCSR0C |= (1 << UCSZ00) | (1 << UCSZ01)
+#define ENABLE_SERIAL UCSR0B |= (1 << RXEN0) | (1 << TXEN0) | (1 << TXCIE0) | (1<<RXCIE0);
 
-#define TX_VECT_SERIAL USART2_TX_vect
+#define RX_VECT_SERIAL USART0_RX_vect
+#define TX_VECT_SERIAL USART0_TX_vect
 
-#define UDRE_VECT_SERIAL USART2_UDRE_vect
+#define TESTERR_SERIAL UCSR0A & ((1<<FE0) | (1<<UPE0) | (1<<DOR0))
+#define DATARXTX_SERIAL UDR0
+
+
+extern void configure();
+ 
 
 #endif
