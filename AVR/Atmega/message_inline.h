@@ -39,7 +39,7 @@ inline void writeEEPROMdefaulData() {
 
 // transmission functions
 
-inline int loadTxMsg(uint8_t codMsg) {
+inline void loadTxMsg(uint8_t codMsg) {
 	uint8_t *p;
 	serial.TXLenght = 0;
 	switch (codMsg) {
@@ -74,9 +74,10 @@ inline int loadTxMsg(uint8_t codMsg) {
 // 0 = enable transmission, 1 = test request endians, 2 = request for default parameters,
 // 3 = activate command paused, 4 write EEPROM 5 suspend transmission 6 reset cmd 7 set directCmd = 1
 // 8 directCmd = 0
-inline uint8_t processSystemCmd() {
+inline void processSystemCmd() {
 	uint8_t *dest = 0;
 	dest = (uint8_t *) &msgRsystemCmd;
+	uint8_t oldDirectCmd;
 	for (uint8_t i = 0; i < DIMR_SYSTEMCMD; i++) dest[i] = serial.buffRX[i];
 	switch (msgRsystemCmd.cmd) {
 		case 0:	// 0 = enable transmission
@@ -116,7 +117,7 @@ inline uint8_t processSystemCmd() {
 			serial.TXCodMsg = MSGT_DEFAULTDATA;
 			return;
 		case 8:	//8 = reset directCmd
-			uint8_t oldDirectCmd = msgTdefaultData.directCmd;
+			oldDirectCmd = msgTdefaultData.directCmd;
 			if (oldDirectCmd) systemReset.restoreMove = 1;
 			msgTsystemOk.subMsgCodRX = 8;
 			serial.TXCodMsg = MSGT_DEFAULTDATA;
@@ -125,7 +126,7 @@ inline uint8_t processSystemCmd() {
 	serial.TXCodMsg = MSGT_SYSTEMERROR;  // response MSGT_SYSTEMERROR
 }
 
-inline uint8_t processMove() {
+inline void processMove() {
 	uint8_t* dest = (uint8_t *) &moveCommandData;
 	for (uint8_t i = 0; i < DIMR_MOVE; i++) dest[i] = serial.buffRX[i];
 	systemTimerCall.moveCommandPresent = 1;
@@ -134,7 +135,7 @@ inline uint8_t processMove() {
 	serial.TXCodMsg = MSGT_COMMANDSTATUS;
 }
 
-inline uint8_t processPidControl() {
+inline void processPidControl() {
 	uint8_t oldDirectCmd = msgTdefaultData.directCmd;
 	uint8_t* dest = (uint8_t *) &msgTdefaultData;
 	for (uint8_t i = 0; i < DIMR_PIDCONTROL; i++) dest[i] = serial.buffRX[i];
@@ -144,7 +145,7 @@ inline uint8_t processPidControl() {
 }
 
 
-inline uint8_t processDirectMove() {
+inline void processDirectMove() {
 	uint8_t *dest = (uint8_t *) &directMove;
 	for (uint8_t i = 0; i < DIMR_DIRECTMOVE; i++) dest[i] = serial.buffRX[i];
 	systemReset.commandReset = 1;
@@ -153,7 +154,7 @@ inline uint8_t processDirectMove() {
 }
 
 
-inline uint8_t processMsg(uint8_t codMsg) {
+inline void processMsg(uint8_t codMsg) {
 	switch (codMsg) {
 		case MSGR_SYSTEMCMD:
 			processSystemCmd();
