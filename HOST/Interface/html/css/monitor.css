@@ -22,3 +22,102 @@
 	border-color: #0062cc;
 }
 
+/* button command list */
+/*
+.btn-custom2 {
+	color: #fff;
+	background-color: #007bff;
+	border-color: #007bff;
+}
+
+.btn-custom2:hover {
+	color: #fff;
+	background-color: #0069d9;
+	border-color: #0062cc;
+}
+
+*/
+
+.btn-custom2.disabled, .btn-custom2:disabled {
+	color: #007bff;
+	background-color: transparent;
+}
+
+.btn-custom2:hover {
+	color: #fff;
+	background-color: #007bff;
+	border-color: #007bff;
+}
+.btn-custom2 {
+	color: #007bff;
+	border-color: #007bff;
+}
+
+
+/* button command direct send */
+.btn-custom3 {
+	color: #fff;
+	background-color: #007bff;
+	border-color: #007bff;
+}
+
+.btn-custom3:hover {
+	color: #fff;
+	background-color: #0069d9;
+	border-color: #0062cc;
+}
+
+/* button command add to list */
+.btn-custom4 {
+	color: #fff;
+	background-color: #007bff;
+	border-color: #007bff;
+}
+
+.btn-custom4:hover {
+	color: #fff;
+	background-color: #0069d9;
+	border-color: #0062cc;
+}
+
+
+/* command list */
+.list-group{
+	max-height: 300px;
+	margin-bottom: 10px;
+	padding: 0px;
+	margin: 0px;
+	width: 100%;
+	overflow:scroll;
+	-webkit-overflow-scrolling: touch;
+}
+
+.listcont {
+	padding: 0px;
+	margin: 0px;
+	/*width: 33%;*/
+}
+
+.listbody {
+	padding: 0px !important;
+	margin: 3px !important;
+}
+
+/*graphics
+	font-size: 14px;
+	line-height: 1.2em;
+*/
+.graphPopup {
+	width: 100%;
+	height: 150px;
+}
+
+.graphRpm {
+	width: 100%;
+	height: 250px;
+}
+
+
+.itemCmdListSel {
+	background-color: #94c3f4;
+}

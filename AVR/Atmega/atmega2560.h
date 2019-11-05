@@ -6,46 +6,44 @@
 #include <stdint.h>
 #include "message.h"
 
+/*  ----------------------------------------------------------------------------------
+    these files contain the hardware settings of the atmega2560
+    and the necessary data structures.
+    in the .h there are the macros that define the settings of each individual hardware
+    so as to be able to modify them without modifying the code in .c.
+    uart, interrupts and timers used:
 
-/*----------------------------------------------------------------------------------
-work in progress
-these files contain the hardware settings of the atmega2560
-and the necessary data structures.
-in the .h there are the macros that define the settings of each individual hardware
-so as to be able to modify them without modifying the code in .c.
-uart, interrupts and timers used:
+    high priority    PCINT2_vect     encoder pin change interrupt
+      USART0_RX_vect
+      USART0_UDRE_vect
+      USART0_TX_vect      serial UART
+      (timer 4) TIMER_COMPA_SYSTEMT system timer
+      (timer 5) no interrupt    PWM encoder
+    low priority
 
-high priority		PCINT2_vect			encoder pin change interrupt
-			USART0_RX_vect 
-			USART0_UDRE_vect 
-			USART0_TX_vect			serial UART
-			(timer 4) TIMER_COMPA_SYSTEMT	system timer
-			(timer 5) no interrupt		PWM encoder
-low priority
-
-the variables modified in the interrupt routines have the volatile tag.
-The macro ATOMIC_BLOCK is used to have an atomic reading or writing of the variables
-involved outside the interrupt routines.
-ATOMIC_BLOCK(ATOMIC_FORCEON) {} in include <util/atomic.h>
-in interrupt routines the other possible interrupts are suspended by default.
-----------------------------------------------------------------------------------*/
+    the variables modified in the interrupt routines have the volatile tag.
+    The macro ATOMIC_BLOCK is used to have an atomic reading or writing of the variables
+    involved outside the interrupt routines.
+    ATOMIC_BLOCK(ATOMIC_FORCEON) {} in include <util/atomic.h>
+    in interrupt routines the other possible interrupts are suspended by default.
+    ----------------------------------------------------------------------------------*/
 
 
-/*----------------------------------------------------------------------------------
-HBridge timer 5
+/*  ----------------------------------------------------------------------------------
+    HBridge timer 5
 
-pin 53 ATMEGA2560 PC0 = Arduino MEGA2560 digital pin 37 = motor direction to Hbridge in 
-pin 54 ATMEGA2560 PC1 = Arduino MEGA2560 digital pin 36 = motor direction to Hbridge in 
-pin 39 ATMEGA2560 PL4 = Arduino MEGA2560 digital pin 45 = motor pwm speed to Hbridge in
-We use timer 5 as a pwm generator in mode 9 (PWM phase / frequency correct).
-The TCNT register counts forward when the counter is equal to the OCR5A register
-starts counting backwards to zero.
-Based on the value of the OCR5B register the square wave is generated in phase.
-the OCR5A register is set to the fixed value 1750 (so as to generate steps that represent
-a voltage that controls 1/10 revolutions per minute of the motor) so the frequency correct is not used.
-No interrupt routine is needed as the hardware connects directly to pin PL4 (port L)
-by setting the correct square wave value.
-----------------------------------------------------------------------------------*/
+    pin 53 ATMEGA2560 PC0 = Arduino MEGA2560 digital pin 37 = motor direction to Hbridge in
+    pin 54 ATMEGA2560 PC1 = Arduino MEGA2560 digital pin 36 = motor direction to Hbridge in
+    pin 39 ATMEGA2560 PL4 = Arduino MEGA2560 digital pin 45 = motor pwm speed to Hbridge in
+    We use timer 5 as a pwm generator in mode 9 (PWM phase / frequency correct).
+    The TCNT register counts forward when the counter is equal to the OCR5A register
+    starts counting backwards to zero.
+    Based on the value of the OCR5B register the square wave is generated in phase.
+    the OCR5A register is set to the fixed value 1750 (so as to generate steps that represent
+    a voltage that controls 1/10 revolutions per minute of the motor) so the frequency correct is not used.
+    No interrupt routine is needed as the hardware connects directly to pin PL4 (port L)
+    by setting the correct square wave value.
+    ----------------------------------------------------------------------------------*/
 
 
 #define OUTPUTDIR_HBRIDGE DDRC |= (1<<PC1) | (1<<PC0) // Set PC0 PC1 as output
@@ -55,9 +53,9 @@ by setting the correct square wave value.
 
 // use macros to change direction of the engine or stop it
 
-#define STOP_MOTOR_HBRIDGE PORTC &= 0xFC	// 0b11111100 set to 0 PC0 PC1
-#define SET_FORWARD_HBRIDGE PORTC |= 1		// 0b00000001 set to 1 PCO
-#define SET_REVERSE_HBRIDGE PORTC |= 2		// 0b00000010 set to 1 PC1
+#define STOP_MOTOR_HBRIDGE PORTC &= 0xFC  // 0b11111100 set to 0 PC0 PC1
+#define SET_FORWARD_HBRIDGE PORTC |= 1    // 0b00000001 set to 1 PCO
+#define SET_REVERSE_HBRIDGE PORTC |= 2    // 0b00000010 set to 1 PC1
 
 // use  STOP_MOTOR_HBRIDGE before SET_FORWARD_HBRIDGE or SET_REVERSE_HBRIDGE
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -66,7 +64,7 @@ by setting the correct square wave value.
 
 
 #define DIRPWM_HBRIDGE DDRL |= (1 << DDL4)
-#define OUTPWM_HBRIDGE (1 << COM5B1)	// non-inverting output pin associated with the OCR5B register
+#define OUTPWM_HBRIDGE (1 << COM5B1)  // non-inverting output pin associated with the OCR5B register
 
 // (1 << WG53) (1 << WG50) 0b1001
 // mode 9 0b1001 PWM phase/frequency correct use TCNT5 = OCR5A max counter update BOTTOM
@@ -77,23 +75,23 @@ by setting the correct square wave value.
     OCR5A
     register OCR5B contains the maximum number of PWM steps
     1750 step the maximum number of engine laps is 175 rpm so there is a minimum resolution of 0.1 rpm
-				16000000
+        16000000
     the frequency of the PWM = ------------------ = 4571,4 Hz
-				1750 X 2
+        1750 X 2
 */
 
 #define MAXSTEP_HBRIDGE OCR5A = 1750
 
-#define VAR_DUTY_HBRIGE OCR5B
+#define VAR_DUTY_HBRIDGE OCR5B
 
 
-/*----------------------------------------------------------------------------------
-Encoder uses the interrupt pin change and the vector PCINT2_vect PCIINT[16-23]
-the interrupt is activated on the rising and falling edges of both encoder pins
-the input pins are:
-encoder input 1 --> input Atmega2560 pin 89 PK1 PCINT17 = arduino A8
-encoder input 2 --> input Atmega2560 pin 88 PK0 PCINT16 = arduino A9
-----------------------------------------------------------------------------------*/
+/*  ----------------------------------------------------------------------------------
+    Encoder uses the interrupt pin change and the vector PCINT2_vect PCIINT[16-23]
+    the interrupt is activated on the rising and falling edges of both encoder pins
+    the input pins are:
+    encoder input 1 --> input Atmega2560 pin 89 PK1 PCINT17 = arduino A8
+    encoder input 2 --> input Atmega2560 pin 88 PK0 PCINT16 = arduino A9
+    ----------------------------------------------------------------------------------*/
 
 #define PORT_ENCODER ((1<<PK0) | (1<<PK1) | (1<<PK2) | (1<<PK3) | (1<<PK4) | (1<<PK5) | (1<<PK6) | (1<<PK7))
 
@@ -111,22 +109,21 @@ encoder input 2 --> input Atmega2560 pin 88 PK0 PCINT16 = arduino A9
 
 #define INTERRUPTVECT_ENCODER PCINT2_vect
 
-
-/*----------------------------------------------------------------------------------
-system timer(timer 4)
-This timer acts as a system clock and generates an interrupt every millisecond.
-The TCNT timer counter is used by the ecoder to measure the time of a rising
-or falling edge of the pins to calculate the motor speed.
-Set a flag to activate the feedBack () function at a predefined interval (settable).
-Perform conversions along with the feedBack () function of position, spins, speed (when possible).
-feedBack () is an inline function in the main loop.
-----------------------------------------------------------------------------------*/
+/*  ----------------------------------------------------------------------------------
+    system timer(timer 4)
+    This timer acts as a system clock and generates an interrupt every millisecond.
+    The TCNT timer counter is used by the ecoder to measure the time of a rising
+    or falling edge of the pins to calculate the motor speed.
+    Set a flag to activate the feedBack () function at a predefined interval (settable).
+    Perform conversions along with the feedBack () function of position, spins, speed (when possible).
+    feedBack () is an inline function in the main loop.
+    ----------------------------------------------------------------------------------*/
 
 #define PRESCALER_SYSTEMT (1 << CS40)  // timer 4 clk/1
 
 #define MULTIPLIER_FRACTIONAL_TIME 0,0000625
 #define MAXTIMER_SYSTEMT 16000
-#define OCRA_SYSTEMT OCR4A = MAXTIMER_SYSTEMT	// Output Compare Register A 16000000/16000 = 1000 interrupt/s
+#define OCRA_SYSTEMT OCR4A = MAXTIMER_SYSTEMT // Output Compare Register A 16000000/16000 = 1000 interrupt/s
 
 #define MODEB_SYSTEMT (1 << WGM42) // TCCR4B register mode 4
 
@@ -138,15 +135,15 @@ feedBack () is an inline function in the main loop.
 
 #define COUNTER_SYSTEM TCNT4
 
-/*----------------------------------------------------------------------------------
-serial UART0
+/*  ----------------------------------------------------------------------------------
+    serial UART0
 
-serial over usb
+    serial over usb
 
-the serial uses two vectors id interrupt one to receive and one to transmit.
-binary messages have a first byte that represents the type of message that has a predetermined
-size and therefore its length
-----------------------------------------------------------------------------------*/
+    the serial uses two vectors id interrupt one to receive and one to transmit.
+    binary messages have a first byte that represents the type of message that has a predetermined
+    size and therefore its length
+    ----------------------------------------------------------------------------------*/
 
 #define F_CPU 16000000
 #define BAUD 115200
@@ -171,6 +168,6 @@ size and therefore its length
 
 
 extern void configure();
- 
+
 
 #endif

@@ -1,14 +1,10 @@
 #include <stdio.h>
 #include <websock/websock.h>
 #include <pthread.h>
+#include "include/message.h"
 #include "include/wsserver.h"
-#include "include/tools.h"
-#include "include/receivewsmsg.h"
 #include "include/usbrs232.h"
-#include "include/variables.h"
-
-int active = 1;
-// if active == 0  threadRs232 terminate
+#include "include/timertx.h"
 
 int users = 0;
 // number of users connected with the web socket
@@ -38,9 +34,9 @@ int onMessage(libwebsock_client_state *state, libwebsock_message *msg) {
 			fprintf(stderr, "opcode: %d\n", msg->opcode);
 		break;
 		case WS_OPCODE_BINARY:
-			fprintf(stderr, "opcode: %d\n", msg->opcode);
+			fprintf(stderr, "\nmessaggio arrivato opcode: %u length %llu\n\n", msg->opcode , msg->payload_len);
 			for(int i=0; i< msg->payload_len; i++)
-				fprintf(stderr, "%u-%c,",msg->payload[i],msg->payload[i]);
+				fprintf(stderr, "%u, ",msg->payload[i]);
 			fprintf(stderr, "\n");
 			receiveBinaryWsMsg(msg->payload,msg->payload_len);
 		break;
@@ -53,33 +49,26 @@ int onMessage(libwebsock_client_state *state, libwebsock_message *msg) {
 
 int onOpen(libwebsock_client_state *state) {
 	users++;
-	fprintf(stderr, "onopen: %d\n", state->sockfd);
+	fprintf(stderr, "onopen: %d users %d\n", state->sockfd,users);
 	return 0;
 }
 
 int onClose(libwebsock_client_state *state) {
 	users--;
-  fprintf(stderr, "onclose: %d\n", state->sockfd);
+	if(users <= 0) closeRs232();
+  fprintf(stderr, "onclose: %d users %d\n",state->sockfd,users);
   return 0;
 }
 
 
 int main(int argc, char *argv[]) {
-	pthread_t threadRs232;
-	int  iretRs232;
-	void * ptrEmpty;
-
-	testHostEndians();
-	iretRs232 = pthread_create(&threadRs232,NULL,mainRs232,ptrEmpty);
 	if (argc != 2) {
-		fprintf(stderr, "Usage: %s <port to listen on>\n\nNote: You must be root to bind to port below 1024\n", argv[0]);
+		fprintf(stderr, "Usage: %s <port to listen on>\n\nNote: You must be root to bind to port below 1024\nuse .\\wsservec 5000\n", argv[0]);
 		exit(0);
 	}
 
-	if(iretRs232) {
-		fprintf(stderr,"Error - pthread_create() return code: %d\n",iretRs232);
-		exit(EXIT_FAILURE);
-	}
+	startSerialThread();
+
 
 	wctx = libwebsock_init();
 	if (wctx == NULL ) {
@@ -93,9 +82,8 @@ int main(int argc, char *argv[]) {
 	wctx->onclose = onClose;
 
 	libwebsock_wait(wctx);
-	active = 0;
-	pthread_join(threadRs232,NULL);
-	//perform any cleanup here.
+	stopSerialThread();
+
 	fprintf(stderr, "Exiting.\n");
 	exit(EXIT_SUCCESS);
 }

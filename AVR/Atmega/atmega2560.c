@@ -18,14 +18,14 @@ void configureHBridge() {
 	SETBPWM_HBRIDGE;
 
 	MAXSTEP_HBRIDGE;
-	VAR_DUTY_HBRIGE = 0;
+	VAR_DUTY_HBRIDGE = 0;
 	encoderData.pwmHbrigde = 0;
 }
 
 // encoder
 
 
-ISR(INTERRUPTVECT_ENCODER) {	// called by the rising and falling edge of the selected pins
+ISR(INTERRUPTVECT_ENCODER) {  // called by the rising and falling edge of the selected pins
 	register uint8_t newEncoderState = VALUE_ENCODER;
 	register uint8_t testXor = encoderData.oldEncoderState ^ newEncoderState;
 	switch (testXor) {
@@ -58,6 +58,7 @@ ISR(INTERRUPTVECT_ENCODER) {	// called by the rising and falling edge of the sel
 					}
 				}
 			}
+			break;
 		case 2:
 			switch (newEncoderState) {
 				case 1:
@@ -87,6 +88,7 @@ ISR(INTERRUPTVECT_ENCODER) {	// called by the rising and falling edge of the sel
 					}
 				}
 			}
+			break;
 	}
 }
 
@@ -100,9 +102,9 @@ void configureEncoder() {
 	encoderData.timeLapse = 0;
 
 	SETPORT_ENCODER;
-	INPUT_ENCODER;	// Set pin as input
-	PULLUP_ENCODER;	// Activate PULL UP
-	//SETINTERRUPT_ENCODER;
+	INPUT_ENCODER;  // Set pin as input
+	PULLUP_ENCODER; // Activate PULL UP
+	SETINTERRUPT_ENCODER;
 	encoderData.oldEncoderState = VALUE_ENCODER;
 }
 
@@ -118,59 +120,45 @@ ISR (INTERRUPTVECT_SYSTEMT) {
 		systemTimerCall.paramChange = 0;
 	}
 
-	//end of command, loading of the next one
-	if (encoderData.cmdEnd) {
-		if (encoderData.enableStopPosition) {
-			VAR_DUTY_HBRIGE = 0;
-			encoderData.pwmHbrigde = 0;
-			systemTimerFB.cmdStop = 1;
-		}
-		if (systemTimerCall.currentMoveCommand == 1) systemTimerCall.moveCommand1Present = 0;
-		else systemTimerCall.moveCommand2Present = 0;
-		systemTimerCall.currentMoveCommand = 0;
-		encoderData.cmdEnd = 0;
-		systemTimerFB.cmdRun = 0;
-		systemTimerFB.cmdStart = 1;
-		systemTimerFB.commandPointer = NULL;
+	// UART receive
+	if (serial.enableTimeoutRX) {
+		if (!serial.delayCountRX) {
+			serial.enableTimeoutRX = 0;
+			serial.TXmsgTimeout = 1;
+			serial.delayCountRX = RECEIVE_DELAY_TIME;
+		} else serial.delayCountRX--;
 	}
-	if (systemTimerFB.cmdStart) {
-		if (systemTimerCall.moveCommand1Present) {
-			systemTimerCall.currentMoveCommand = 1;
-			systemTimerFB.commandPointer = &moveCommand1Data;
-			systemTimerFB.stepCounterB = systemTimerFB.commandPointer->nStepTarget;
-			systemTimerFB.cmdStart = 0;
-			systemTimerFB.cmdPause = 1;
-		} else {
-			if (systemTimerCall.moveCommand2Present) {
-				systemTimerCall.currentMoveCommand = 2;
-				systemTimerFB.commandPointer = &moveCommand2Data;
-				systemTimerFB.stepCounterB = systemTimerFB.commandPointer->nStepTarget;
-				systemTimerFB.cmdStart = 0;
-				systemTimerFB.cmdPause = 1;
+
+	//end of command
+	if (!msgTdefaultData.directCmd) {
+		if (encoderData.cmdEnd) {
+			if (encoderData.enableStopPosition) {
+				VAR_DUTY_HBRIDGE = 0;
+				encoderData.pwmHbrigde = 0;
+				//systemTimerFB.cmdStop = 1;
+				CMD_SETSTOP;	//macro with multiple instructions
+			} else {
+				CMD_SETEND;   //macro with multiple instructions
 			}
-		}
-		systemTimerFB.nextCmd = systemTimerCall.moveCommand1Present + systemTimerCall.moveCommand2Present;
-	}
-	if (systemTimerFB.cmdPause) {
-		if (!systemTimerFB.commandPointer->pause) {
-			systemTimerFB.stepCounterB -= systemTimerFB.stepDrift;
-			systemTimerFB.stepDrift = 0;
-			systemTimerFB.cmdRun = 1;
-			systemTimerFB.cmdPause = 0;
+			encoderData.cmdEnd = 0;
+			encoderData.enableStopPosition = 0;
+			encoderData.enableEndPosition = 0;
+			systemTimerCall.moveCommandPresent = 0;
+			//serial.TXMsgCmdStatus = 1;
 		}
 	}
 
-	// UART receive
-	if (!serial.delayCountRX) {
-		serial.delayCountRX = RECEIVE_DELAY_TIME;
-		serial.replyMsgRunRX = 1;
-		serial.codMsgDetectRX = 0;
-	}
-	if (serial.codMsgDetectRX) {
-		serial.delayCountRX--;
-	} else {
-		if (serial.countRX > 0) {
-			serial.codMsgDetectRX = 1;
+	// timer pause
+	if (!msgTdefaultData.directCmd) {
+		if (systemTimerFB.pause) {
+			systemTimerFB.pause = 0;
+			systemTimerFB.pauseCount = moveCommandData.millsPause;
+		}
+		if (systemTimerFB.cmdPause) {
+			if (!systemTimerFB.pauseCount) {
+				CMD_SETRUN; //macro with multiple instructions
+			}
+			systemTimerFB.pauseCount++;
 		}
 	}
 
@@ -200,24 +188,28 @@ ISR (INTERRUPTVECT_SYSTEMT) {
 			systemTimerFB.forward = 0;
 		}
 	}
-	// enables the end-of-position test
-	if (systemTimerFB.stepCounterB <= MIN_STEP_END) {
-		encoderData.enableEndPosition = 1;
-		encoderData.endPosition = systemTimerFB.stepCounterB;
-		if (systemTimerFB.commandPointer->enableStop) encoderData.enableStopPosition = 1;
-	}
 	// increments milliseconds between ecoder interrupts
 	systemTimerFB.ecoderMills++;
 
-	// sample the time interval of call to feedback and set the parameters
+	// enables the end-of-position test
+	if (!msgTdefaultData.directCmd) {
+		if ((systemTimerFB.stepCounterB <= MIN_STEP_END) && (systemTimerCall.moveCommandPresent) && (!encoderData.enableEndPosition)) {
+			encoderData.enableEndPosition = 1;
+			encoderData.endPosition = systemTimerFB.stepCounterB;
+			if (moveCommandData.enableStop) encoderData.enableStopPosition = 1;
+		}
+	}
+
+	// sample the time interval of call to feedback and set the speed parameters
 	if (! systemTimerCall.FBCount) {
 		systemTimerCall.FBCount = systemTimerCall.FBSampleTime;
+		systemTimerCall.FBRun = 1;
 		if ((encoderData.engineStop) && (encoderData.pwmHbrigde == 0)) {
-		systemTimerFB.ecoderMills = 0;
-		encoderData.deltaPosition = 0;
-	}
-	if (systemTimerFB.cmdRun) {
-		if (! systemTimerCall.FBInProgress) { //if it is not already running
+			systemTimerFB.ecoderMills = 0;
+			encoderData.deltaPosition = 0;
+		}
+		if (systemTimerFB.cmdRun) {
+			if (! systemTimerCall.FBInProgress) { //if it is not already running
 				// encoder precalculation
 				if (systemTimerFB.deltaPosition) {
 					systemTimerFB.ecoderMills = 0;
@@ -229,7 +221,12 @@ ISR (INTERRUPTVECT_SYSTEMT) {
 		}
 	}
 	systemTimerCall.FBCount--;
+
+	/*
+
+	*/
 }
+
 
 void configureSystemTimer() {
 	inizializesystemTimerFB();
@@ -242,22 +239,38 @@ void configureSystemTimer() {
 
 // UART0
 
-
-
 ISR(RX_VECT_SERIAL) {
-	if ((serial.msgErrorRX) || (TESTERR_SERIAL)) {
-		serial.buffRX[serial.countRX] = DATARXTX_SERIAL;
+	if (TESTERR_SERIAL) {
+		serial.buffRX[0] = DATARXTX_SERIAL;
 		serial.msgErrorRX = 1;
 		serial.UCSRA = FLAG_SERIAL;
-		return;
+		serial.codMsgRX = 0;
+		serial.enableTimeoutRX = 1;
+		serial.delayCountRX = RECEIVE_DELAY_TIME;
 	}
-	serial.buffRX[serial.countRX] = DATARXTX_SERIAL;
-	if (!serial.countRX) serial.codMsgRX = serial.buffRX[0];
-	serial.countRX++;
-	if (serial.countRX >= MAX_BUFFRX) {
-		serial.countRX = 0;
-		serial.msgErrorRX = 1;
+	if (!serial.codMsgRX) {
+		serial.enableTimeoutRX = 1;
+		serial.delayCountRX = RECEIVE_DELAY_TIME;
+		serial.codMsgRX = DATARXTX_SERIAL;
+		switch (serial.codMsgRX) {
+			case MSGR_SYSTEMCMD:
+				serial.msgLengthRX = DIMR_SYSTEMCMD;
+				break;
+			case MSGR_MOVE:
+				serial.msgLengthRX = DIMR_MOVE;
+				break;
+			case MSGR_PIDCONTROL:
+				serial.msgLengthRX = DIMR_PIDCONTROL;
+				break;
+      case MSGR_DIRECTMOVE:
+        serial.msgLengthRX = DIMR_DIRECTMOVE;
+        break;
+		}
+	} else {
+		serial.buffRX[serial.countRX] = DATARXTX_SERIAL;
+		serial.countRX++;
 	}
+	if (serial.countRX >= serial.msgLengthRX) serial.codMsgDetectRX = 1;
 }
 
 
@@ -269,22 +282,7 @@ ISR(TX_VECT_SERIAL) {
 
 void configureSerial() {
 
-	serial.countRX = 0;
-	serial.codMsgRX = 0;  // 0 = no message
-	serial.msgErrorRX = 0;
-	serial.codMsgDetectRX = 0;
-	serial.replyMsgRunRX = 0;
-	serial.delayCountRX = RECEIVE_DELAY_TIME;
-
-	serial.TXEnable = 0;
-	serial.TXMsgReady = 0; // message ready
-	serial.TXMsgSysReady = 0; // message ready
-	serial.TXCount = 0; // TX buffer counter
-	serial.TXCodMsg = 0; // message code to be transmitted
-	serial.TXSysCodMsg = 0; // message code to be transmitted
-	serial.TXLenght = 0; // message length
-	serial.TXBusy = 0;
-
+	inizializeSerial();
 
 	FLAG_SERIAL = 0x00;
 

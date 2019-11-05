@@ -78,6 +78,7 @@ int  iretSend;
 int activeSerial = 1;
 
 //----------------------------------------------------------------------------------------
+void serialErrorToWs(uint8_t type);
 void serialTxStart();
 void sendMessage();
 void sendMsgFifo();
@@ -86,8 +87,8 @@ uint8_t ritLengthMsgRX(uint8_t cod);
 void serialReceive();
 void * mainRs232(void *ptr);
 void * mainSend(void *ptr);
-void printReceive(uint8_t tipo);
-void printSend(int rit);
+void stampaRicevi(uint8_t tipo);
+void stampaInvia(int rit);
 
 void startSerialThread() {
 	InitTimer();
@@ -136,9 +137,11 @@ void openRs232() {
 	resetFIFOSend();
 	resetStartSerialTxData();
 	serialTxData.nextMsg = 0;
+	//serialTxData.startSerial = 1;
 	wsSerialStates.states = 1;
 	wsSerialStates.codE = 0;
 	transmitMsgWsSerialStates();
+	//transmitRs232(0,1,AVRT_SYSTEMCMD,setMsgTsystemCmd(5), DIM_SYSTEMCMD); // 5 = suspend transmission
 }
 
 
@@ -168,18 +171,20 @@ void resetFIFOSend() {
 
 void * mainRs232(void *ptr) {
 	resetStartSerialRxData();
-	fprintf(stderr,"open serial thread RX\n");
+	fprintf(stderr,"open thread seriale RX\n");
 	serialTxData.nextMsg = 0;
 	while(activeSerial) {
 		serialReceive();
 	};
-	fprintf(stderr,"close serial thread RX\n");
+	fprintf(stderr,"close thread seriale RX\n");
 }
 
 void * mainSend(void *ptr) {
 	fifoSend = initDllist(&mutexSend);	//initialize the fifo
+	//testFifo();
 	resetStartSerialTxData();
-	fprintf(stderr,"open serial thread TX\n");
+	//serialTxData.startSerial = 1;
+	fprintf(stderr,"open thread trasmissione seriale aperto\n");
 	while(activeSerial) {
 		runDelayTimer();
 		if(serialConfData.isOpen) {
@@ -187,6 +192,7 @@ void * mainSend(void *ptr) {
 				resetTXRqtCs();
 				// 0 = enable transmission command status
 				serialTxData.reqCs = 1;
+				//transmitRs232(1,1,AVRT_SYSTEMCMD,setMsgTsystemCmd(0), DIM_SYSTEMCMD); 
 				setTXRqtCs(MIN_DELAYRQTCS);
 			}
 			if(isSendStatus()) {
@@ -204,21 +210,24 @@ void * mainSend(void *ptr) {
 				if(rit < 0) {
 					fprintf(stderr,"\nrit = %u codMsg %u size %u\n\n",rit,serialTxData.bufSend[0],serialTxData.sizeBufSend);
 				}
-				printSend(rit);
+				stampaInvia(rit);
+				//stampaRicevi(4);
+				//fprintf(stderr,"fine Invio\n\n");
 				serialTxData.msgToSend = 0;	// message sent
 			}
 		}
 	}
-	fprintf(stderr,"close serial thread RX\n");
+	fprintf(stderr,"thread tasmissione seriale chiuso\n");
 }
 
 // section receive ----------------------------------------------------------------------------------------
 //function of management of received data from the avr
 void serialReceive() {
 	if(serialConfData.isOpen) {
-
+		
+		//if(isRXTimeoutDelay()) resetStartSerialRxData();	//rx timeOut timer timertx.c
 		int n = read(serialConfData.fd,&serialRxData.chrBuffR,1);
-		printReceive(1);
+		stampaRicevi(1);
 		
 		if(n > 0) {
 			serialRxData.bufReceive[serialRxData.countBuf] = serialRxData.chrBuffR;
@@ -228,11 +237,13 @@ void serialReceive() {
 				serialRxData.codMsg = serialRxData.bufReceive[0];
 				serialRxData.codMsgSet = 1;
 				serialRxData.lengthMsg = ritLengthMsgRX(serialRxData.codMsg);
+				//stampaRicevi(2);
 				if(!serialRxData.lengthMsg) {
 					serialRxData.msgError = 1;
 				}
 			}
 			if(serialRxData.lengthMsg && (serialRxData.lengthMsg == serialRxData.countBuf)) {
+				//resetRXTimeout();
 				switch(serialRxData.codMsg) {	// select the correct message management actionmsgavr.c
 					case AVRR_SYSTEMERROR:
 						actionSystemError(&serialRxData.bufReceive[1],DIM_SYSTEMERROR);
@@ -243,7 +254,7 @@ void serialReceive() {
 						serialTxData.msgOk = 1;
 					break;
 					case AVRR_COMMANDSTATUS:
-						fprintf(stderr,"receive command status");
+						fprintf(stderr,"ricevuto command status");
 						actionCommandStatus(&serialRxData.bufReceive[1],DIM_COMMANDSTATUS);
 						resetStartSerialTxData();
 						serialTxData.msgOk = 1;
@@ -255,17 +266,18 @@ void serialReceive() {
 					break;
 				}
 				if(serialRxData.codMsg != AVRR_COMMANDSTATUS) {
-					printReceive(3);
-					printReceive(4);
+					stampaRicevi(3);
+					stampaRicevi(4);
 				}
 				resetStartSerialRxData();
 				if(serialRxData.codMsg != AVRR_COMMANDSTATUS) {
-					fprintf(stderr,"end receive\n\n");
+					fprintf(stderr,"fine ricezione\n\n");
 				}
 				serialTxData.nextMsg = 1;
 			}
 		} else {
-			fprintf(stderr,"read %d text %s\n", n, serialRxData.bufReceive);
+			//serialRxData.bufReceive[n] = '\0';
+			fprintf(stderr,"letti %d testo %s\n", n, serialRxData.bufReceive);
 		}
 	
 	}
@@ -281,6 +293,7 @@ uint8_t ritLengthMsgRX(uint8_t cod) {
 			fprintf(stderr,"\nritLengthMsgRX codMsg = %u DIM_SYSTEMOK + 1 = %lu \n\n",cod,DIM_SYSTEMOK + 1);
 		return DIM_SYSTEMOK + 1;
 		case AVRR_COMMANDSTATUS:
+			//fprintf(stderr,"\nritLengthMsgRX codMsg = %u DIM_COMMANDSTATUS + 1 = %lu \n\n",cod,DIM_COMMANDSTATUS + 1);
 		return DIM_COMMANDSTATUS + 1;
 		case AVRR_DEFAULTDATA:
 			fprintf(stderr,"\nritLengthMsgRX codMsg = %u DIM_DEFAULTDATA + 1 = %lu \n\n",cod,DIM_DEFAULTDATA + 1);
@@ -313,7 +326,7 @@ void printsendMsgFifo(int direct,int codMsg) {
 		break;
 		default:
 			fprintf(stderr, "\n---------------------------------------------\n");
-			fprintf(stderr, "\n fifo --> avr cod = %d direct %d isMoveCmdNotPresent() %d \n", codMsg,direct,isMoveCmdNotPresent());
+			fprintf(stderr, "\n fifo --> avr cod = %d diretto %d isMoveCmdNotPresent() %d \n", codMsg,direct,isMoveCmdNotPresent());
 		break;
 	}
 }
@@ -383,41 +396,67 @@ void serialTxStart() {
 		resetTXRqtCs();
 		setTXRqtCs(MIN_DELAYRQTCS);
 		fprintf(stderr,"serialTxStart\n");
+		//uint8_t* msgSystem = setMsgTsystemCmd(2); 
+		//serialTxData.bufSend[0] = AVRT_SYSTEMCMD;
+		//for(uint8_t i=0; i<DIM_SYSTEMCMD; i++) serialTxData.bufSend[i + 1] = msgSystem[i];
+		//serialTxData.sizeBufSend = DIM_SYSTEMCMD + 1;
 		
 	//transmitRs232(uint8_t instant,uint8_t wsCod = fifo,uint8_t msgCod,uint8_t* msg,size_t len)
 		transmitRs232(0,1,AVRT_SYSTEMCMD,setMsgTsystemCmd(5), DIM_SYSTEMCMD); // 5 = suspend transmission
 		transmitRs232(0,1,AVRT_SYSTEMCMD,setMsgTsystemCmd(7), DIM_SYSTEMCMD); // 7 = set directCmd
 		transmitRs232(0,1,AVRT_SYSTEMCMD,setMsgTsystemCmd(2), DIM_SYSTEMCMD); // 2 = request for default parameters
+		//transmitRs232(0,1,AVRT_SYSTEMCMD,setMsgTsystemCmd(0), DIM_SYSTEMCMD); // 0 = enable transmission
+		transmitRs232(0,1,AVRT_DIRECTMOVE,setMsgTDirectMove(), DIM_DIRECTMOVE); 
+		//transmitRs232(0,1,AVRT_SYSTEMCMD,setMsgTsystemCmd(0), DIM_SYSTEMCMD); // 0 = enable transmission
+		//transmitRs232(0,1,AVRT_SYSTEMCMD,setMsgTsystemCmd(0), DIM_SYSTEMCMD); // 0 = enable transmission
+
 		fprintf(stderr,"AVRT_SYSTEMCMD %d DIMT_SYSTEMCMD %lu serialTxData.sizeBufSend  %d serialTxData.bufSend[0] %d\n ",AVRT_SYSTEMCMD,DIM_SYSTEMCMD,serialTxData.sizeBufSend,serialTxData.bufSend[0]);
 		serialTxData.msgReadyBuf = 1;
 		serialTxData.msgToSend = 1;
 		serialTxData.nextMsg = 1;
 }
 
+//handles the timeout message
+void serialErrorToWs(uint8_t type) {
+	if(type == 1) {
+		//resetTXTimeout();
+		fprintf(stderr,"timeout error TX timeout %d\n",type);
+	}
+}
 
 //---------------------------------------------------------------------------------------------------------
 
-void printSend(int rit) {
+void stampaInvia(int rit) {
 	if(serialTxData.bufSend[0] = AVRT_SYSTEMCMD)
 		if(serialTxData.bufSend[1] = 0) return;
-	fprintf(stderr,"send message\n message:");
+	fprintf(stderr,"inviato messaggio\n messaggio:");
 		for( int t = 0; t < serialTxData.sizeBufSend; t++) 
-			fprintf(stderr," pos %d value %d",t,serialTxData.bufSend[t]);
-		fprintf(stderr,"\nsend n byte %d = dim buff send %d\n",rit,serialTxData.sizeBufSend);
+			fprintf(stderr," pos %d valore %d",t,serialTxData.bufSend[t]);
+		fprintf(stderr,"\ninviati n byte %d = dim buff invio %d\n",rit,serialTxData.sizeBufSend);
 }
 
-void printReceive(uint8_t tipo) {
+void stampaRicevi(uint8_t tipo) {
 	if(tipo == 1) {
-		//fprintf(stderr,"message received \n byte read val %d\n",serialRxData.chrBuffR);
+		//fprintf(stderr,"ricevuto messaggio\nletto byte val %d\n",serialRxData.chrBuffR);
 	}
 	if(tipo == 2) {
-		fprintf(stderr,"message lungh %d byte - codmsg %u ",serialRxData.lengthMsg,serialRxData.codMsg);
+		fprintf(stderr,"messaggio deve essere lungh %d byte - codmsg %u ",serialRxData.lengthMsg,serialRxData.codMsg);
 		fprintf(stderr,"serialRxData.countBuf %d\n",serialRxData.countBuf);
 	}
 	if(tipo == 3) {
-		fprintf(stderr,"status flag serialRxData countBuf %d codMsg %d codMsgSet %d lengthMsg %d\n",
+		fprintf(stderr,"stato flag serialRxData countBuf %d codMsg %d codMsgSet %d lengthMsg %d\n",
 			serialRxData.countBuf,serialRxData.codMsg,
 			serialRxData.codMsgSet,serialRxData.lengthMsg);
+	}
+	if(tipo == 4) {
+		/*fprintf(stderr,"stato flag serialTxData sizeBufSend %d msgToSend %d \n",
+			serialTxData.sizeBufSend,
+			serialTxData.msgToSend);
+		fprintf(stderr,"msgReadyBuf %d msgOk %d replyMsg %d replyCount %d\n",
+			serialTxData.msgReadyBuf,
+			serialTxData.msgOk,
+			serialTxData.replyMsg,
+			serialTxData.replyCount);*/
 	}
 }
 

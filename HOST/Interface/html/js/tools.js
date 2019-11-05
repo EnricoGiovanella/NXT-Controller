@@ -75,7 +75,7 @@ var pageManager = {
 		this.listObjGroup.push(objGroup);
 		for(var nMsg in listNameRMsg) this.listObjRMsg[listNameRMsg[nMsg]] = objGroup;
 	},
-	dispatchMsg:function(nameMsg,data) {
+	dispatchMsg:function(nameMsg,data) {	//da togliere
 		this.listObjRMsg[nameMsg].receiveData(nameMsg,data);
 	}
 };
@@ -99,12 +99,21 @@ function eventChange(obj,listId,listFcb) {
 	}
 }
 
-function getData(listId,listField,listInType,listTypeVar) {
+function setData(listId,listField,listInType,data) {
+	for(i in listId) {
+		if((listInType[i] == 'c') || (listInType[i] == 'pc'))	//checkbox
+			if(data[listField[i]]) $('#' + listId[i]).prop('checked', true);
+			else $('#' + listId[i]).prop('checked', false);
+		else $('#' + listId[i]).val( '' + data[listField[i]]);
+	}
+}
+
+function getData(listId,listField,listInType,listTypeVar) { 
 	rit = {};
 	for(i in listId) {
 		var value = '';
 		if((listInType[i] == 'c') || (listInType[i] == 'pc'))	//checkbox
-			value = $('#' + listId[i]).is(":checked");
+			value = $('#' + listId[i]).is(":checked"); 
 		else value = $('#' + listId[i]).val();
 		switch(listTypeVar[i]) {
 			case "i":
@@ -124,15 +133,6 @@ function getData(listId,listField,listInType,listTypeVar) {
 		}
 	}
 	return rit;
-}
-
-function setData(listId,listField,listInType,data) { 
-	for(i in listId) {
-		if((listInType[i] == 'c') || (listInType[i] == 'pc'))	//checkbox
-			if(data[listField[i]]) $('#' + listId[i]).prop('checked', true);
-			else $('#' + listId[i]).prop('checked', false);
-		else $('#' + listId[i]).val(String(data[listField[i]]));
-	}
 }
 
 function enableElements(listId) {
@@ -166,4 +166,67 @@ function setMessage(cltxtcol,id,txt,txte) {
 	$('#' + id).empty();
 	$('#' + id).append('<span class="' + cltxtcol + '">' + txt + ' ' + txte + '</span>');
 }
+
+function addItemListCommand(type,idL,id,txt) {
+	if(type = 1)
+		htxt = '<li class="list-group-item" id="' + id + '"><strong>' + txt + '</strong></li>';
+	if(type = 2)
+		htxt = '<li class="list-group-item" id="' + id + '"><small><strong>' + txt + '</strong><small></li>';
+	$('#' + idL).append($(htxt));
+            
+}
+
+function addValueGraphBlock(id,value) {
+	$('#' + id).html('<strong ml-3>' + ' ' + value + '</strong>');
+}
+
+function addTitleGraphBlock(id,txt) {
+	$('#' + id).html(txt);
+}
+
+function createSingleGraph(idPar,ymax,plotSeries) {
+	var plot = $.plot('#' + idPar,[plotSeries],{
+			series: {shadowSize: 0},
+			yaxis: {min: 0, max: ymax},
+			xaxis: {show: false}
+		});
+	return plot;
+}
+
+function createMultipleGraph(idPar,ymax,dataset) {
+	var plot = $.plot('#' + idPar,dataset,{
+			series: {shadowSize: 0},
+			yaxis: {min: 0, max: ymax},
+			xaxis: {show: false}
+		});
+	return plot;
+}
+
+
+
+//-------------------------------------------
+var comSerialGroup = {
+	apriSerialeId : [],
+	apriSerialeField : [],
+	apriSerialeInType : [],
+	start:function() {
+		eventClick(this,['id','id'],['nomeCb','nomeCb']);
+		eventChange(this,['id','id'],['nomeCb','nomeCb']);
+		statesManager.records({connectWs: '', connectSerial: ''},this);
+		drawSelectOptions(['id','id','id'],'serial',['devices','','']);
+	},
+	trasmitData:function(msg) {
+		if (msg == 'apriSeriale')
+		trasmitWs('apriSeriale',getData(this.apriSerialeId,this.apriSerialeField,this.apriSerialeInType));
+	},
+	receive:function(msg,data) {
+		if (msg = 'statoSeriale') this.manageStates(msg,data);
+	},
+	manageStates:function(msg,data) {
+		statesManager.setStates({connectWs: false, connectSerial: false});
+	},
+	callBackStates: function(modStates) {},
+	nomeCb: function(data,e) {}
+}
+
 

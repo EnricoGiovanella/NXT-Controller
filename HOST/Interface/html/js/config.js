@@ -6,7 +6,8 @@ var config = {
 	},
 	'serial': {	//rs232 v=return value, e=visible text, d=disabled, s=selected
 		devices: [
-			{'v': '/dev/ttyS0', 'e': '/dev/ttyS0', 'd': 0, 's': 1},
+			{'v': '/dev/ttyACM0', 'e': '/dev/ttyACM0', 'd': 0, 's': 1},
+			{'v': '/dev/ttyS0', 'e': '/dev/ttyS0', 'd': 0, 's': 0},
 			{'v': '/dev/ttyS1', 'e': '/dev/ttyS1', 'd': 0, 's': 0},
 			{'v': '/dev/ttyS2', 'e': '/dev/ttyS2', 'd': 1, 's': 0}
 		],

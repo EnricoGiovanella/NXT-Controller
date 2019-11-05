@@ -1,47 +1,48 @@
-<html lang="us">
+<!DOCTYPE html>
+<html lang="it">
  <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <!-- Latest compiled and minified CSS
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"> -->
   <link href="css/bootstrap.min.css" rel="stylesheet"/>
   <link href="css/monitor.css" rel="stylesheet"/>
-  <!-- jQuery library -->
-  <script src="js/jquery-3.1.1.js">
-  </script>
-  <script src="js/bootstrap.min.js">
-  </script>
-  <!-- app monitor JavaScript -->
-  <script src="js/config.js">
-  </script>
-  <script src="js/tools.js">
-  </script>
-  <script src="js/msgWebsock.js">
-  </script>
-  <script src="js/websock.js">
-  </script>
-  <script src="js/manageConnection.js">
-  </script>
-  <script src="js/monitor.js">
-  </script>
+  <!-- jQuery library
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script> -->
+  <script src="js/jquery-3.1.1.js"></script>
+  <script src="js/jquery.flot.js"></script>
+  <!-- Latest compiled JavaScript
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script> -->
+  <script src="js/bootstrap.min.js"></script>
+  <!-- JavaScript per monitor -->
+  <script src="js/config.js"></script>
+  <script src="js/tools.js"></script>
+  <script src="js/msgWebsock.js"></script>
+  <script src="js/websock.js"></script>
+  <script src="js/manage.js"></script>
+  <script src="js/manageGraph.js"></script>
+  <script src="js/manageCommand.js"></script>
+  <script src="js/monitor.js"></script>
  </head>
  <body>
   <nav class="navbar navbar-expand-sm">
+   <h5>
+    Command Monitor
+   </h5>
    <img class="mx-auto d-block" src="img/mega2560_100.png" style="max-height:100px;"/>
   </nav>
-  <div class=".container-fluid ml-3 mr-3" id="contenuto">
+  <div class=".container-fluid ml-3 mr-3" id="content">
    <div id="MainAccordion">
     <div class="card">
      <div class="card-header">
-      <a aria-expanded="true" class="card-link" data-toggle="collapse" href="#MainCollapseOne">
+      <a class="card-link" data-toggle="collapse" href="#MainCollapseOne">
        Web Socket connection
       </a>
       <div>
       </div>
       <div class="form-inline" id="groupSocketE">
-       <span class="disconnectMessage">
-        disconnected
-       </span>
       </div>
-      <div class="collapse" data-parent="#MainAccordion" id="MainCollapseOne" style="">
+      <div class="collapse show" data-parent="#MainAccordion" id="MainCollapseOne">
        <div class="card-body" id="groupSocket">
         <div class="row">
          <div class="form-group col-sm-4 mb-3 text-center">
@@ -64,7 +65,7 @@
          </div>
          <div class="form-group col-sm-3 mb-3 text-center">
           <br/>
-          <button class="btn btn-custom1" disabled="" id="idsoc_disconnect" type="button">
+          <button class="btn btn-custom1" id="idsoc_disconnect" type="button">
            Disconnect
           </button>
          </div>
@@ -75,17 +76,14 @@
     </div>
     <div class="card">
      <div class="card-header">
-      <a aria-expanded="false" class="card-link collapsed" data-toggle="collapse" href="#MainCollapseDue">
+      <a class="card-link" data-toggle="collapse" href="#MainCollapseTwo">
        Serial connection
       </a>
       <div>
       </div>
       <div class="form-inline" id="groupSerialE">
-       <span class="disconnectMessage">
-        disconnected
-       </span>
       </div>
-      <div class="collapse" data-parent="#MainAccordion" id="MainCollapseDue" style="">
+      <div class="collapse show" data-parent="#MainAccordion" id="MainCollapseTwo">
        <div class="card-body" id="groupSerial">
         <div class="row">
          <div class="form-group col-sm-3 mb-3 text-center">
@@ -127,18 +125,487 @@
         <div class="row">
          <div class="form-group col-sm-3 mb-3 text-center">
           <br/>
-          <button class="btn btn-custom1" disabled="" id="idser_connect" type="button">
+          <button class="btn btn-custom1" id="idser_connect" type="button">
            Connect
           </button>
          </div>
          <div class="form-group col-sm-3 mb-3 text-center">
           <br/>
-          <button class="btn btn-custom1" disabled="" id="idser_disconnect" type="button">
+          <button class="btn btn-custom1" id="idser_disconnect" type="button">
            Disconnect
           </button>
          </div>
         </div>
        </div>
+      </div>
+     </div>
+    </div>
+    <div class="card">
+     <div class="card-header">
+      <a class="card-link" data-toggle="collapse" href="#MainCollapseThree">
+       Commands
+      </a>
+      <div class="collapse show" data-parent="#MainAccordion" id="MainCollapseThree">
+       <div class="card-body" id="groupCommand">
+        <!-- command list object start -->
+        <div class="row">
+         <div class="col-sm-8" id="commands">
+          <div class="card-header">
+           <h6 class="card-title">
+            Direct Move
+           </h6>
+          </div>
+          <div class="card-body listbody" id="groupDirectMove">
+           <div class="row">
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="iddm_speedTarget">
+              Speed target x 10
+             </label>
+             <input class="form-control form-control-sm" id="iddm_speedTarget" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="iddm_forward">
+              Forward
+             </label>
+             <div class="form-group form-check form-control-sm">
+              <input id="iddm_forward" type="checkbox"/>
+             </div>
+            </div>
+           </div>
+           <div class="row">
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <br/>
+             <button class="btn btn-custom1" id="iddm_send" type="button">
+              Send
+             </button>
+            </div>
+            <div class="form-group col-sm-5 mb-3 text-center">
+             <br/>
+             <button class="btn btn-custom1" id="iddm_reset" type="button">
+              Command Reset &amp; Engine Stop
+             </button>
+            </div>
+           </div>
+          </div>
+          <div class="card-header">
+           <h6 class="card-title">
+            Move
+           </h6>
+          </div>
+          <div class="card-body listbody" id="groupMove">
+           <div class="row">
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idmv_speedTarget">
+              Speed target x 10
+             </label>
+             <input class="form-control form-control-sm" id="idmv_speedTarget" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idmv_nStepTarget">
+              Num step target
+             </label>
+             <input class="form-control form-control-sm" id="idmv_nStepTarget" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idmv_forward">
+              forward
+             </label>
+             <div class="form-group form-check form-control-sm">
+              <input id="idmv_forward" type="checkbox"/>
+             </div>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idmv_enableStop">
+              Enable stop
+             </label>
+             <div class="form-group form-check form-control-sm">
+              <input id="idmv_enableStop" type="checkbox"/>
+             </div>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idmv_pause">
+              Start pause
+             </label>
+             <div class="form-group form-check form-control-sm">
+              <input id="idmv_pause" type="checkbox"/>
+             </div>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idmv_millsPause">
+              Milliseconds pause
+             </label>
+             <input class="form-control form-control-sm" id="idmv_millsPause" type="text"/>
+            </div>
+           </div>
+           <div class="row">
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <br/>
+             <button class="btn btn-custom1" id="idmv_send" type="button">
+              Send
+             </button>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <br/>
+             <button class="btn btn-custom1" id="idmv_fifo" type="button">
+              Add list
+             </button>
+            </div>
+           </div>
+          </div>
+          <div class="card-header">
+           <h6 class="card-title">
+            Set avr status
+           </h6>
+          </div>
+          <div class="card-body listbody" id="groupParam2avr">
+           <div class="row">
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_enablePID">
+              Enable control PID
+             </label>
+             <div class="form-group form-check form-control-sm">
+              <input id="idp2a_enablePID" type="checkbox"/>
+             </div>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_Kp">
+              Coefficient Kp
+             </label>
+             <input class="form-control form-control-sm" id="idp2a_Kp" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_Ki">
+              Coefficient Ki
+             </label>
+             <input class="form-control form-control-sm" id="idp2a_Ki" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_Kd">
+              Coefficient Kd
+             </label>
+             <input class="form-control form-control-sm" id="idp2a_Kd" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_FBSampleTime">
+              Sample Time FB
+             </label>
+             <input class="form-control form-control-sm" id="idp2a_FBSampleTime" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_ImaxSum">
+              Max integral sum
+             </label>
+             <input class="form-control form-control-sm" id="idp2a_ImaxSum" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_IminSum">
+              Min integral sum
+             </label>
+             <input class="form-control form-control-sm" id="idp2a_IminSum" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_maxPWM">
+              Max out pwm
+             </label>
+             <input class="form-control form-control-sm" id="idp2a_maxPWM" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_minPWM">
+              Min out pwm
+             </label>
+             <input class="form-control form-control-sm" id="idp2a_minPWM" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_engineStartThreshold">
+              Engine Start Threshold
+             </label>
+             <input class="form-control form-control-sm" id="idp2a_engineStartThreshold" type="text"/>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <label class="col-form-label" for="idp2a_directCmd">
+              Direct command
+             </label>
+             <div class="form-group form-check form-control-sm">
+              <input id="idp2a_directCmd" type="checkbox"/>
+             </div>
+            </div>
+           </div>
+           <div class="row">
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <br/>
+             <button class="btn btn-custom1" id="idp2a_getStatus" type="button">
+              Get Avr Status
+             </button>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <br/>
+             <button class="btn btn-custom1" id="idp2a_send" type="button">
+              Send
+             </button>
+            </div>
+            <div class="form-group col-sm-3 mb-3 text-center">
+             <br/>
+             <button class="btn btn-custom1" id="idp2a_fifo" type="button">
+              Add list
+             </button>
+            </div>
+           </div>
+          </div>
+         </div>
+         <div class="card listcont col-sm-4">
+          <div class="card-header text-center text-secondary">
+           <h5 class="card-title">
+            Command List
+           </h5>
+           <div class="btn-toolbar mb-3">
+            <div class="btn-group mr-2">
+             <button class="btn btn-custom2 btn-sm" id="cmdListUp" type="button">
+              <small>
+               <strong>
+                Up
+               </strong>
+              </small>
+             </button>
+             <button class="btn btn-custom2 btn-sm" id="cmdListDown" type="button">
+              <small>
+               <strong>
+                Down
+               </strong>
+              </small>
+             </button>
+            </div>
+            <div "="" class="btn-group mr-2">
+             <button class="btn btn-custom2 btn-sm" id="cmdListDel" type="button">
+              <small>
+               <strong>
+                Del
+               </strong>
+              </small>
+             </button>
+             <button class="btn btn-custom2 btn-sm" id="cmdListDelAll" type="button">
+              <small>
+               <strong>
+                Del All
+               </strong>
+              </small>
+             </button>
+            </div>
+            <div "="" class="btn-group mr-2">
+             <button class="btn btn-custom2 btn-sm" id="cmdListMoveUp" type="button">
+              <small>
+               <strong>
+                Move up
+               </strong>
+              </small>
+             </button>
+             <button class="btn btn-custom2 btn-sm" id="cmdListMoveDown" type="button">
+              <small>
+               <strong>
+                Move down
+               </strong>
+              </small>
+             </button>
+            </div>
+            <div class="btn-group mt-2 mr-2">
+             <button class="btn btn-custom1 btn-sm" id="cmdListSend" type="button">
+              <strong>
+               Send
+              </strong>
+             </button>
+            </div>
+           </div>
+          </div>
+          <div class="card-body listbody">
+           <ul class="list-group" id="commandList">
+           </ul>
+          </div>
+         </div>
+        </div>
+        <!-- command list object end -->
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+   <div class="card-header">
+    <h6 class="card-title">
+     Avr Status
+    </h6>
+   </div>
+   <div class="card-body listbody" id="groupParamAvr">
+    <div class="row">
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_enablePID">
+       Enable control PID
+      </label>
+      <input class="form-control form-control-sm" id="idpa_enablePID" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_Kp">
+       Coefficient Kp
+      </label>
+      <input class="form-control form-control-sm" id="idpa_Kp" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_Ki">
+       Coefficient Ki
+      </label>
+      <input class="form-control form-control-sm" id="idpa_Ki" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_Kd">
+       Coefficient Kd
+      </label>
+      <input class="form-control form-control-sm" id="idpa_Kd" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_FBSampleTime">
+       Sample Time FB
+      </label>
+      <input class="form-control form-control-sm" id="idpa_FBSampleTime" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_ImaxSum">
+       Max integral sum
+      </label>
+      <input class="form-control form-control-sm" id="idpa_ImaxSum" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_IminSum">
+       Min integral sum
+      </label>
+      <input class="form-control form-control-sm" id="idpa_IminSum" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_maxPWM">
+       Max out pwm
+      </label>
+      <input class="form-control form-control-sm" id="idpa_maxPWM" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_minPWM">
+       Min out pwm
+      </label>
+      <input class="form-control form-control-sm" id="idpa_minPWM" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_engineStartThreshold">
+       Engine Start Threshold
+      </label>
+      <input class="form-control form-control-sm" id="idpa_engineStartThreshold" readonly="" type="text"/>
+     </div>
+     <div class="form-group col-sm-2 mb-3 text-center">
+      <label class="col-form-label" for="idpa_directCmd">
+       Direct Command
+      </label>
+      <input class="form-control form-control-sm" id="idpa_directCmd" readonly="" type="text"/>
+     </div>
+    </div>
+    <div class="row">
+     <div class="form-group col-sm-3 mb-3 text-center">
+      <br/>
+      <button class="btn btn-custom1" id="idpa_paramAvr" type="button">
+       Read avr status
+      </button>
+     </div>
+     <div class="form-group col-sm-3 mb-3 text-center">
+      <br/>
+      <button class="btn btn-custom1" id="idpa_recovers" type="button">
+       Write EEPROM
+      </button>
+     </div>
+    </div>
+   </div>
+   <div class="card-header">
+    <h6 class="card-title">
+     Motor speed graphic
+    </h6>
+   </div>
+   <div class="card-body listbody" id="groupRpm1">
+    <div class="row">
+     <div class="col-sm-3">
+      <p class="mb-4">
+       <span class="">
+        Direction
+       </span>
+       <span class="" id="graphDirValue">
+        <strong>
+        </strong>
+       </span>
+       <br/>
+       <span class="">
+        Rpm
+       </span>
+       <span class="" id="graphRpmValue">
+        <strong>
+        </strong>
+       </span>
+       <br/>
+       <span class="">
+        Position
+       </span>
+       <span class="" id="graphPosValue">
+        <strong>
+        </strong>
+       </span>
+       <br/>
+       <span class="">
+        Hbridge
+       </span>
+       <span class="" id="graphHBValue">
+        <strong>
+        </strong>
+       </span>
+       <br/>
+      </p>
+      <p class="mt-4">
+      </p>
+     </div>
+     <div class="col-sm-8">
+      <div class="graphRpm" id="graphRpm1">
+      </div>
+     </div>
+    </div>
+   </div>
+   <div class="card-header">
+    <h6 class="card-title">
+     Proportional Integral Derived Control
+    </h6>
+   </div>
+   <div class="card-body listbody" id="groupRpm2">
+    <div class="row">
+     <div class="col-sm-3">
+      <p class="mb-4">
+       <span class="">
+        Proportional Term
+       </span>
+       <span class="" id="graphPtermValue">
+        <strong>
+        </strong>
+       </span>
+       <br/>
+       <span class="">
+        Integral Term
+       </span>
+       <span class="" id="graphItermValue">
+        <strong>
+        </strong>
+       </span>
+       <br/>
+       <span class="">
+        Derived Term
+       </span>
+       <span class="" id="graphDtermValue">
+        <strong>
+        </strong>
+       </span>
+       <br/>
+      </p>
+      <p class="mt-4">
+      </p>
+     </div>
+     <div class="col-sm-8">
+      <div class="graphRpm" id="graphPID2">
       </div>
      </div>
     </div>
