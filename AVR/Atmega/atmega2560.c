@@ -158,7 +158,7 @@ ISR (INTERRUPTVECT_SYSTEMT) {
 			if (!systemTimerFB.pauseCount) {
 				CMD_SETRUN; //macro with multiple instructions
 			}
-			systemTimerFB.pauseCount++;
+			systemTimerFB.pauseCount--;
 		}
 	}
 
